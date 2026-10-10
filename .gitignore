@@ -1,0 +1,19 @@
+node_modules/
+dist/
+build/
+coverage/
+
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Flutter (customer-app is vendored into this repo)
+customer-app/.dart_tool/
+customer-app/build/
+customer-app/android/.gradle/
+customer-app/ios/Pods/

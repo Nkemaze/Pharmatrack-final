@@ -1,0 +1,17 @@
+{
+  "name": "pharmatrack",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "pharmacy-web"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:web": "npm run dev --workspace pharmacy-web",
+    "build:web": "npm run build --workspace pharmacy-web",
+    "test:backend": "npm run test --workspace backend",
+    "migrate:deploy": "npm run migrate:deploy --workspace backend"
+  }
+}

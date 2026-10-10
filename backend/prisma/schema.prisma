@@ -1,0 +1,221 @@
+// PharmaTrack v2 — data model (see ../docs/DATA_MODEL.md)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PHARMACY
+  USER
+}
+
+enum PharmacyStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+  DELETED
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum MovementType {
+  RECEIPT
+  SALE
+  RETURN
+  TRANSFER
+  ADJUSTMENT
+  DESTRUCTION
+  LOSS
+}
+
+enum AdjustmentDirection {
+  INCREASE
+  DECREASE
+}
+
+model Pharmacy {
+  id             String          @id @default(uuid())
+  name           String
+  address        String?
+  city           String?
+  state          String?
+  zipCode        String?         @map("zip_code")
+  phone          String?
+  email          String?
+  licenseNumber  String?         @map("license_number")
+  emergencyPhone String?         @map("emergency_phone")
+  emergencyDesc  String?         @map("emergency_desc")
+  latitude       Decimal?        @db.Decimal(9, 6)
+  longitude      Decimal?        @db.Decimal(9, 6)
+  openingHours   Json?           @map("opening_hours")
+  status         PharmacyStatus  @default(PENDING)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  users    User[]
+  products Product[]
+
+  @@map("pharmacy")
+}
+
+model User {
+  id                String     @id @default(uuid())
+  name              String     @unique
+  email             String?    @unique
+  role              Role       @default(PHARMACY)
+  passwordHash      String     @map("password_hash")
+  deviceId          String?    @map("device_id")
+  pharmacyId        String?    @map("pharmacy_id")
+  status            UserStatus @default(ACTIVE)
+  mustUpdateProfile Boolean    @default(false) @map("must_update_profile")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  pharmacy           Pharmacy?        @relation(fields: [pharmacyId], references: [id])
+  performedMovements StockMovement[]  @relation("performed_by")
+  approvedMovements  StockMovement[]  @relation("approved_by")
+  refreshTokens      RefreshToken[]
+  revokedAccess      RevokedAccessToken[]
+
+  @@map("users")
+}
+
+model Product {
+  id                   String   @id @default(uuid())
+  pharmacyId           String   @map("pharmacy_id")
+  name                 String
+  category             String?
+  strength             String?
+  dosageForm           String?  @map("dosage_form")
+  barcode              String?
+  requiresPrescription Boolean  @default(false) @map("requires_prescription")
+  isControlled         Boolean  @default(false) @map("is_controlled")
+  pricePerUnit         Decimal? @db.Decimal(10, 2) @map("price_per_unit")
+  pricePerPacket       Decimal? @db.Decimal(10, 2) @map("price_per_packet")
+  packetSize           Int?     @map("packet_size")
+  unitLabel            String?  @default("unit") @map("unit_label")
+  imageUrl             String?  @map("image_url")
+  lowStockThreshold    Int?     @map("low_stock_threshold")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  pharmacy Pharmacy       @relation(fields: [pharmacyId], references: [id], onDelete: Cascade)
+  batches  ProductBatch[]
+
+  @@unique([pharmacyId, barcode])
+  @@index([pharmacyId])
+  @@map("product")
+}
+
+model ProductBatch {
+  id          String   @id @default(uuid())
+  productId   String   @map("product_id")
+  batchNumber String?
+  expiryDate  DateTime? @db.Date @map("expiry_date")
+  receivedAt  DateTime @default(now()) @map("received_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@index([productId])
+  @@map("product_batch")
+}
+
+model StockMovement {
+  id                  String              @id @default(uuid())
+  batchId             String              @map("product_batch_id")
+  type                MovementType
+  quantity            Int
+  direction           AdjustmentDirection?
+  counterpartyName    String?             @map("counterparty_name")
+  counterpartyAddress String?             @map("counterparty_address")
+  referenceNumber     String?             @map("reference_number")
+  prescriptionNumber  String?             @map("prescription_number")
+  reason              String?
+  performedByUserId   String?             @map("performed_by_user_id")
+  deviceId            String?             @map("device_id")
+  occurredAt          DateTime            @default(now()) @map("occurred_at")
+  recordedAt          DateTime            @default(now()) @map("recorded_at")
+  approvedByUserId    String?             @map("approved_by_user_id")
+  syncedAt            DateTime?           @map("synced_at")
+
+  batch       ProductBatch @relation(fields: [batchId], references: [id])
+  performedBy User?        @relation("performed_by", fields: [performedByUserId], references: [id])
+  approvedBy  User?        @relation("approved_by", fields: [approvedByUserId], references: [id])
+  lossReport  LossReport?
+
+  @@index([batchId])
+  @@index([type, occurredAt])
+  @@index([performedByUserId])
+  @@map("stock_movement")
+}
+
+model LossReport {
+  id                    String    @id @default(uuid())
+  movementId            String    @unique @map("stock_movement_id")
+  circumstances         String
+  reportedToAuthorityAt DateTime? @map("reported_to_authority_at")
+  authorityReference    String?   @map("authority_reference")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  movement StockMovement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+
+  @@map("loss_report")
+}
+
+model RefreshToken {
+  id            String    @id @default(uuid())
+  jti           String    @unique
+  userId        String    @map("user_id")
+  expiresAt     DateTime  @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+  replacedByJti String?   @map("replaced_by_jti")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_token")
+}
+
+model RevokedAccessToken {
+  jti       String   @id
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime @default(now()) @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("revoked_access_token")
+}
+
+model LoginAttempt {
+  scope          String
+  key            String
+  count          Int       @default(0)
+  firstAttemptAt DateTime  @default(now()) @map("first_attempt_at")
+  lockedUntil    DateTime? @map("locked_until")
+
+  @@id([scope, key])
+  @@map("login_attempt")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("setting")
+}

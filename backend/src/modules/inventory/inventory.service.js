@@ -53,6 +53,18 @@ async function assertProductScope(productId, pharmacyId) {
   return product;
 }
 
+const NEVER_MATCHING_UUID = '00000000-0000-0000-0000-000000000000';
+
+function movementProductWhere(user, pharmacyIdParam = null) {
+  if (user.role === 'ADMIN') {
+    // Admin: scope to a specific tenant via ?pharmacyId, or return all tenants.
+    return pharmacyIdParam ? { pharmacyId: pharmacyIdParam } : null;
+  }
+  // Non-admin: always scoped to the caller's pharmacy. A user with no pharmacy
+  // sees nothing (never-matching uuid rather than a null nested filter).
+  return { pharmacyId: user.pharmacyId ?? NEVER_MATCHING_UUID };
+}
+
 // --- Products ----------------------------------------------------------------
 
 export async function listProducts({ user, query }) {
@@ -77,8 +89,8 @@ export async function listProducts({ user, query }) {
   };
 }
 
-export async function getProduct({ user, productId }) {
-  const pharmacyId = resolvePharmacyId(user, { pharmacyId: null });
+export async function getProduct({ user, productId, query = {} }) {
+  const pharmacyId = resolvePharmacyId(user, query);
   const product = await prisma.product.findFirst({
     where: { id: productId, pharmacyId },
     include: { batches: true },
@@ -117,8 +129,8 @@ export async function createProduct({ user, data }) {
   return { id: product.id, ...(batchId ? { batchId } : {}) };
 }
 
-export async function updateProduct({ user, productId, data }) {
-  const pharmacyId = resolvePharmacyId(user, { pharmacyId: null });
+export async function updateProduct({ user, productId, data, query = {} }) {
+  const pharmacyId = resolvePharmacyId(user, query);
   await assertProductScope(productId, pharmacyId);
   const product = await prisma.product.update({
     where: { id: productId },
@@ -131,8 +143,8 @@ export async function updateProduct({ user, productId, data }) {
 
 // --- Batches -----------------------------------------------------------------
 
-export async function listBatches({ user, productId }) {
-  const pharmacyId = resolvePharmacyId(user, { pharmacyId: null });
+export async function listBatches({ user, productId, query = {} }) {
+  const pharmacyId = resolvePharmacyId(user, query);
   const product = await prisma.product.findFirst({ where: { id: productId, pharmacyId }, include: { batches: true } });
   if (!product) throw new AppError(ErrorCodes.NOT_FOUND);
   const remaining = await batchRemainingMap(product.batches.map((b) => b.id));
@@ -141,8 +153,8 @@ export async function listBatches({ user, productId }) {
     .sort((a, b) => (b.receivedAt?.getTime() ?? 0) - (a.receivedAt?.getTime() ?? 0));
 }
 
-export async function createBatch({ user, productId, data }) {
-  const pharmacyId = resolvePharmacyId(user, { pharmacyId: null });
+export async function createBatch({ user, productId, data, query = {} }) {
+  const pharmacyId = resolvePharmacyId(user, query);
   const product = await prisma.product.findFirst({ where: { id: productId, pharmacyId } });
   if (!product) throw new AppError(ErrorCodes.NOT_FOUND);
 
@@ -166,8 +178,8 @@ export async function createBatch({ user, productId, data }) {
   });
 }
 
-export async function updateBatch({ user, batchId, data }) {
-  const pharmacyId = resolvePharmacyId(user, { pharmacyId: null });
+export async function updateBatch({ user, batchId, data, query = {} }) {
+  const pharmacyId = resolvePharmacyId(user, query);
   const existing = await prisma.productBatch.findUnique({ where: { id: batchId }, include: { product: true } });
   if (!existing) throw new AppError(ErrorCodes.NOT_FOUND);
   if (existing.product.pharmacyId !== pharmacyId) throw new AppError(ErrorCodes.TENANT_SCOPE);
@@ -232,7 +244,7 @@ export async function createMovement({ user, data }) {
 }
 
 export async function listMovements({ user, query }) {
-  const pharmacyScope = user.role === 'ADMIN' && query.pharmacyId;
+  const productWhere = movementProductWhere(user, query.pharmacyId);
   const where = {
     ...(query.batchId ? { batchId: query.batchId } : {}),
     ...(query.type ? { type: query.type } : {}),
@@ -244,10 +256,14 @@ export async function listMovements({ user, query }) {
           },
         }
       : {}),
-    batch: {
-      ...(query.productId ? { productId: query.productId } : {}),
-      product: pharmacyScope ? { pharmacyId: query.pharmacyId } : { pharmacyId: user.pharmacyId },
-    },
+    ...(productWhere
+      ? {
+          batch: {
+            ...(query.productId ? { productId: query.productId } : {}),
+            product: productWhere,
+          },
+        }
+      : {}),
   };
 
   const total = await prisma.stockMovement.count({ where });
@@ -265,9 +281,8 @@ export async function listMovements({ user, query }) {
 }
 
 export async function exportMovements({ user, query }) {
-  const where = {
-    batch: { product: user.role === 'ADMIN' && query.pharmacyId ? { pharmacyId: query.pharmacyId } : { pharmacyId: user.pharmacyId } },
-  };
+  const productWhere = movementProductWhere(user, query.pharmacyId);
+  const where = productWhere ? { batch: { product: productWhere } } : {};
   const movements = await prisma.stockMovement.findMany({
     where,
     include: { batch: { include: { product: true } } },
@@ -297,9 +312,7 @@ function toCsv(headers, rows) {
 // --- Loss reports -------------------------------------------------------------
 
 function lossReportScope(user, query) {
-  return user.role === 'ADMIN' && query.pharmacyId
-    ? { pharmacyId: query.pharmacyId }
-    : { pharmacyId: user.pharmacyId };
+  return movementProductWhere(user, query.pharmacyId);
 }
 
 const LOSS_INCLUDE = {
@@ -307,9 +320,10 @@ const LOSS_INCLUDE = {
 };
 
 export async function listLossReports({ user, query }) {
+  const productWhere = lossReportScope(user, query);
   const where = {
     ...(query.unreportedOnly ? { reportedToAuthorityAt: null } : {}),
-    movement: { batch: { product: lossReportScope(user, query) } },
+    ...(productWhere ? { movement: { batch: { product: productWhere } } } : {}),
   };
   const total = await prisma.lossReport.count({ where });
   const reports = await prisma.lossReport.findMany({
@@ -340,9 +354,10 @@ export async function markLossReportReported({ user, reportId, authorityReferenc
 }
 
 export async function exportLossReports({ user, query }) {
+  const productWhere = lossReportScope(user, query);
   const where = {
     ...(query.unreportedOnly ? { reportedToAuthorityAt: null } : {}),
-    movement: { batch: { product: lossReportScope(user, query) } },
+    ...(productWhere ? { movement: { batch: { product: productWhere } } } : {}),
   };
   const reports = await prisma.lossReport.findMany({ where, include: LOSS_INCLUDE, orderBy: { createdAt: 'asc' } });
   const lines = reports.map((report) => {

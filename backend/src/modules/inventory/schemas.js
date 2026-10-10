@@ -59,6 +59,10 @@ export const productListQuerySchema = z.strictObject({
 
 export const productParamsSchema = z.strictObject({ id: uuid });
 
+export const productDetailQuerySchema = z.strictObject({
+  pharmacyId: uuid.optional(),
+});
+
 export const batchCreateSchema = z.strictObject({
   batchNumber: z.string().trim().nullish(),
   expiryDate: dateOnly.nullish(),
@@ -88,6 +92,7 @@ export const movementCreateSchema = z.strictObject({
 export const movementListQuerySchema = z.strictObject({
   batchId: uuid.optional(),
   productId: uuid.optional(),
+  pharmacyId: uuid.optional(),
   type: z.enum(MovementTypes).optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
@@ -96,6 +101,7 @@ export const movementListQuerySchema = z.strictObject({
 
 export const lossReportListQuerySchema = z.strictObject({
   unreportedOnly: z.coerce.boolean().default(false),
+  pharmacyId: uuid.optional(),
   ...pagination,
 });
 

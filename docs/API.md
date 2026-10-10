@@ -211,7 +211,8 @@ one pharmacy (controlled excluded, `inStock` boolean).
 
 - `GET /products?q=&page=&pageSize=` — inventory view list. `ADMIN` passes
   `?pharmacyId=` to browse another tenant's inventory (otherwise scoped).
-- `GET /products/:id`
+- `GET /products/:id` — `ADMIN` passes `?pharmacyId=` (required for admin; 400
+  if omitted) to scope to a tenant.
 - `POST /products` — body (Zod):
 
 ```json
@@ -224,7 +225,8 @@ one pharmacy (controlled excluded, `inStock` boolean).
 
   Creates the product and optionally its first batch. → `201 { "data": { "id": "..." } }`.
 - `PATCH /products/:id` — same fields, all optional. Updates medicine info only
-  (never stock). → `{ "data": /* inventory view */ }`.
+  (never stock). → `{ "data": /* inventory view */ }`. `ADMIN` passes
+  `?pharmacyId=` (required for admin) to scope to a tenant.
 
 ### Public discovery
 
@@ -244,7 +246,8 @@ one pharmacy (controlled excluded, `inStock` boolean).
 
 ## 5. Batches
 
-Auth: `PHARMACY`/`ADMIN`, tenant-scoped.
+Auth: `PHARMACY`/`ADMIN`, tenant-scoped. `ADMIN` passes `?pharmacyId=` (required
+for admin) on every batch route to scope to a tenant.
 
 - `GET /products/:id/batches` — batches of the product:
 
@@ -263,7 +266,9 @@ Auth: `PHARMACY`/`ADMIN`, tenant-scoped.
 
 ## 6. Movements
 
-Auth: `PHARMACY`/`ADMIN`, tenant-scoped.
+Auth: `PHARMACY`/`ADMIN`. `PHARMACY` is scoped to its own pharmacy. `ADMIN`
+passes `?pharmacyId=` to scope to one tenant; when omitted, the admin sees all
+tenants.
 
 ### `POST /movements`
 
@@ -286,8 +291,8 @@ Rules:
 
 ### `GET /movements`
 
-Query: `?batchId=&productId=&type=&from=&to=&page=&pageSize=`. Chronological
-list, newest first.
+Query: `?batchId=&productId=&type=&from=&to=&page=&pageSize=` (plus
+`?pharmacyId=` for admin scope). Chronological list, newest first.
 
 ```json
 { "data": [ { "id": "...", "batchId": "...", "product": { "id": "...", "name": "Paracétamol" },
@@ -306,7 +311,9 @@ Returns `text/csv` (`Content-Disposition: attachment`) —
 
 ## 7. Loss reports
 
-Auth: `PHARMACY`/`ADMIN`, tenant-scoped.
+Auth: `PHARMACY`/`ADMIN`. `PHARMACY` is scoped to its own pharmacy. `ADMIN`
+passes `?pharmacyId=` to scope to one tenant; when omitted, the admin sees all
+tenants.
 
 - `GET /loss-reports?unreportedOnly=&page=&pageSize=` — list:
 

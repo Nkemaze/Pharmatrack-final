@@ -27,41 +27,41 @@ inventoryRouter.post(
 
 inventoryRouter.get(
   '/products/:id',
-  validate({ params: schemas.productParamsSchema }),
+  validate({ params: schemas.productParamsSchema, query: schemas.productDetailQuerySchema }),
   asyncHandler(async (req, res) => {
-    res.json({ data: await svc.getProduct({ user: req.user, productId: req.validated.params.id }) });
+    res.json({ data: await svc.getProduct({ user: req.user, productId: req.validated.params.id, query: req.validated.query }) });
   }),
 );
 
 inventoryRouter.patch(
   '/products/:id',
-  validate({ params: schemas.productParamsSchema, body: schemas.productUpdateSchema }),
+  validate({ params: schemas.productParamsSchema, body: schemas.productUpdateSchema, query: schemas.productDetailQuerySchema }),
   asyncHandler(async (req, res) => {
-    res.json({ data: await svc.updateProduct({ user: req.user, productId: req.validated.params.id, data: req.validated.body }) });
+    res.json({ data: await svc.updateProduct({ user: req.user, productId: req.validated.params.id, data: req.validated.body, query: req.validated.query }) });
   }),
 );
 
 inventoryRouter.get(
   '/products/:id/batches',
-  validate({ params: schemas.productParamsSchema }),
+  validate({ params: schemas.productParamsSchema, query: schemas.productDetailQuerySchema }),
   asyncHandler(async (req, res) => {
-    res.json({ data: await svc.listBatches({ user: req.user, productId: req.validated.params.id }) });
+    res.json({ data: await svc.listBatches({ user: req.user, productId: req.validated.params.id, query: req.validated.query }) });
   }),
 );
 
 inventoryRouter.post(
   '/products/:id/batches',
-  validate({ params: schemas.productParamsSchema, body: schemas.batchCreateSchema }),
+  validate({ params: schemas.productParamsSchema, body: schemas.batchCreateSchema, query: schemas.productDetailQuerySchema }),
   asyncHandler(async (req, res) => {
-    res.status(201).json({ data: await svc.createBatch({ user: req.user, productId: req.validated.params.id, data: req.validated.body }) });
+    res.status(201).json({ data: await svc.createBatch({ user: req.user, productId: req.validated.params.id, data: req.validated.body, query: req.validated.query }) });
   }),
 );
 
 inventoryRouter.patch(
   '/batches/:id',
-  validate({ params: schemas.batchParamsSchema, body: schemas.batchUpdateSchema }),
+  validate({ params: schemas.batchParamsSchema, body: schemas.batchUpdateSchema, query: schemas.productDetailQuerySchema }),
   asyncHandler(async (req, res) => {
-    res.json({ data: await svc.updateBatch({ user: req.user, batchId: req.validated.params.id, data: req.validated.body }) });
+    res.json({ data: await svc.updateBatch({ user: req.user, batchId: req.validated.params.id, data: req.validated.body, query: req.validated.query }) });
   }),
 );
 

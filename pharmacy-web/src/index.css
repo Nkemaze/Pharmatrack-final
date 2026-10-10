@@ -3,11 +3,249 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+  --color-background: #f8f9ff;
+  --color-on-background: #0b1c30;
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #d8dae5;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-variant: #e1e2ec;
+  --color-surface-tint: #0051d5;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f3fd;
+  --color-surface-container: #ecf0fe;
+  --color-surface-container-high: #e6eafa;
+  --color-surface-container-highest: #e1e5f5;
+  --color-on-surface: #0b1c30;
+  --color-on-surface-variant: #45464d;
+  --color-inverse-surface: #303136;
+  --color-inverse-on-surface: #f2f0f0;
+  --color-outline: #76777d;
+  --color-outline-variant: #c6c6cd;
+  --color-primary: #0051d5;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #131b2e;
+  --color-on-primary-container: #dbe7ff;
+  --color-primary-fixed: #d7e3ff;
+  --color-primary-fixed-dim: #b4c7ff;
+  --color-on-primary-fixed: #00174a;
+  --color-on-primary-fixed-variant: #003ca0;
+  --color-inverse-primary: #adc6ff;
+  --color-secondary: #0051d5;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #316bf3;
+  --color-on-secondary-container: #ffffff;
+  --color-secondary-fixed: #dce5ff;
+  --color-secondary-fixed-dim: #c0cdff;
+  --color-on-secondary-fixed: #00174a;
+  --color-on-secondary-fixed-variant: #003ca0;
+  --color-tertiary: #8a5100;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #85f8c4;
+  --color-on-tertiary-container: #002011;
+  --color-tertiary-fixed: #ffddb3;
+  --color-tertiary-fixed-dim: #ffbc66;
+  --color-on-tertiary-fixed: #2c1600;
+  --color-on-tertiary-fixed-variant: #533500;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
 }
 
-body {
-  margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+html.dark {
+  color-scheme: dark;
+  --color-background: #0b1c30;
+  --color-on-background: #dce5ff;
+  --color-surface: #0b1c30;
+  --color-surface-dim: #0b1c30;
+  --color-surface-bright: #29394a;
+  --color-surface-variant: #45464d;
+  --color-surface-tint: #adc6ff;
+  --color-surface-container-lowest: #061225;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container: #171f33;
+  --color-surface-container-high: #222a3e;
+  --color-surface-container-highest: #2d3549;
+  --color-on-surface: #dce5ff;
+  --color-on-surface-variant: #c6c6cd;
+  --color-inverse-surface: #dce5ff;
+  --color-inverse-on-surface: #303136;
+  --color-outline: #909197;
+  --color-outline-variant: #45464d;
+  --color-primary: #adc6ff;
+  --color-on-primary: #002b77;
+  --color-primary-container: #131b2e;
+  --color-on-primary-container: #dbe7ff;
+  --color-primary-fixed: #d7e3ff;
+  --color-primary-fixed-dim: #b4c7ff;
+  --color-on-primary-fixed: #00174a;
+  --color-on-primary-fixed-variant: #003ca0;
+  --color-inverse-primary: #0051d5;
+  --color-secondary: #adc6ff;
+  --color-on-secondary: #002b77;
+  --color-secondary-container: #316bf3;
+  --color-on-secondary-container: #ffffff;
+  --color-secondary-fixed: #dce5ff;
+  --color-secondary-fixed-dim: #c0cdff;
+  --color-on-secondary-fixed: #00174a;
+  --color-on-secondary-fixed-variant: #003ca0;
+  --color-tertiary: #ffbc66;
+  --color-on-tertiary: #472a00;
+  --color-tertiary-container: #85f8c4;
+  --color-on-tertiary-container: #002011;
+  --color-tertiary-fixed: #ffddb3;
+  --color-tertiary-fixed-dim: #ffbc66;
+  --color-on-tertiary-fixed: #2c1600;
+  --color-on-tertiary-fixed-variant: #533500;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-outline-variant);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-on-background);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+    color: var(--color-on-surface);
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+  .material-symbols-outlined {
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24;
+    line-height: 1;
+  }
+}
+
+@layer components {
+  .table-container {
+    @apply overflow-x-auto rounded-xl border border-outline-variant bg-surface-container-lowest shadow-card;
+  }
+  .zebra-row:nth-child(even) {
+    background-color: var(--color-surface-container-low);
+  }
+  .status-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide;
+  }
+
+  .auth-shell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    overflow: hidden;
+    background: var(--color-background);
+  }
+  .auth-blob {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .auth-blob-1 {
+    top: -120px;
+    left: -100px;
+    width: 420px;
+    height: 420px;
+    background: var(--color-secondary-container);
+  }
+  .auth-blob-2 {
+    bottom: -140px;
+    right: -120px;
+    width: 460px;
+    height: 460px;
+    background: var(--color-tertiary-container);
+    opacity: 0.35;
+  }
+  .auth-blob-3 {
+    top: 40%;
+    left: 55%;
+    width: 260px;
+    height: 260px;
+    background: var(--color-primary);
+    opacity: 0.18;
+  }
+  .auth-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    padding: 32px;
+    border-radius: 16px;
+    background: var(--color-surface-container-lowest);
+    box-shadow: var(--color-elevated, 0 12px 32px rgb(11 28 48 / 0.16));
+  }
+  .auth-brand-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+  .auth-tagline {
+    color: var(--color-on-surface-variant);
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .auth-label {
+    @apply mb-1 block text-label-bold uppercase text-on-surface-variant;
+  }
+  .auth-foot {
+    @apply mt-6 text-center text-body-sm text-on-surface-variant;
+  }
+  .auth-links a {
+    color: var(--color-secondary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .auth-links a:hover {
+    text-decoration: underline;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -15,6 +15,7 @@ export function notFound(req, res) {
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, _req, res, _next) {
   if (err instanceof AppError) {
+    if (err.retryAfter) res.set('Retry-After', String(err.retryAfter));
     return res.status(err.status).json({
       error: {
         code: err.code,

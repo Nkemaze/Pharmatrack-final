@@ -1,7 +1,6 @@
-import { config } from '../../config/index.js';
 import { AppError, ErrorCodes } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
-import { serializeBatch, serializeMovement, serializeProductInventory } from '../../lib/serializers.js';
+import { serializeBatch, serializeLossReport, serializeMovement, serializeProductInventory } from '../../lib/serializers.js';
 import { batchRemainingMap, signOf } from '../../lib/stock.js';
 
 const isoDate = (d) => d.toISOString().slice(0, 10);
@@ -293,6 +292,72 @@ function toCsv(headers, rows) {
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
   return [headers, ...rows].map((row) => row.map(esc).join(',')).join('\n');
+}
+
+// --- Loss reports -------------------------------------------------------------
+
+function lossReportScope(user, query) {
+  return user.role === 'ADMIN' && query.pharmacyId
+    ? { pharmacyId: query.pharmacyId }
+    : { pharmacyId: user.pharmacyId };
+}
+
+const LOSS_INCLUDE = {
+  movement: { include: { batch: { include: { product: true } } } },
+};
+
+export async function listLossReports({ user, query }) {
+  const where = {
+    ...(query.unreportedOnly ? { reportedToAuthorityAt: null } : {}),
+    movement: { batch: { product: lossReportScope(user, query) } },
+  };
+  const total = await prisma.lossReport.count({ where });
+  const reports = await prisma.lossReport.findMany({
+    where,
+    include: LOSS_INCLUDE,
+    orderBy: { createdAt: 'desc' },
+    skip: (query.page - 1) * query.pageSize,
+    take: query.pageSize,
+  });
+  return {
+    data: reports.map(serializeLossReport),
+    meta: { page: query.page, pageSize: query.pageSize, total, totalPages: Math.ceil(total / query.pageSize) || 1 },
+  };
+}
+
+export async function markLossReportReported({ user, reportId, authorityReference }) {
+  const report = await prisma.lossReport.findUnique({ where: { id: reportId }, include: LOSS_INCLUDE });
+  if (!report) throw new AppError(ErrorCodes.NOT_FOUND);
+  if (user.role !== 'ADMIN' && report.movement.batch.product.pharmacyId !== user.pharmacyId) {
+    throw new AppError(ErrorCodes.TENANT_SCOPE);
+  }
+  const updated = await prisma.lossReport.update({
+    where: { id: reportId },
+    data: { reportedToAuthorityAt: new Date(), authorityReference: authorityReference ?? null },
+    include: LOSS_INCLUDE,
+  });
+  return serializeLossReport(updated);
+}
+
+export async function exportLossReports({ user, query }) {
+  const where = {
+    ...(query.unreportedOnly ? { reportedToAuthorityAt: null } : {}),
+    movement: { batch: { product: lossReportScope(user, query) } },
+  };
+  const reports = await prisma.lossReport.findMany({ where, include: LOSS_INCLUDE, orderBy: { createdAt: 'asc' } });
+  const lines = reports.map((report) => {
+    const movement = report.movement;
+    return [
+      isoDate(movement.occurredAt),
+      movement.batch.product.name ?? '',
+      movement.batch.batchNumber ?? '',
+      String(movement.quantity),
+      report.circumstances ?? '',
+      String(report.reportedToAuthorityAt != null),
+      report.authorityReference ?? '',
+    ];
+  });
+  return toCsv(['date', 'product', 'batch', 'quantity', 'reason', 'reported', 'reference'], lines);
 }
 
 // --- Dashboard ----------------------------------------------------------------

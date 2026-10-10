@@ -98,3 +98,30 @@ inventoryRouter.get(
     res.json({ data: await svc.dashboard({ user: req.user }) });
   }),
 );
+
+inventoryRouter.get(
+  '/loss-reports',
+  validate({ query: schemas.lossReportListQuerySchema }),
+  asyncHandler(async (req, res) => {
+    res.json(await svc.listLossReports({ user: req.user, query: req.validated.query }));
+  }),
+);
+
+inventoryRouter.patch(
+  '/loss-reports/:id/reported',
+  validate({ params: schemas.lossReportParamsSchema, body: schemas.lossReportUpdateSchema }),
+  asyncHandler(async (req, res) => {
+    res.json({ data: await svc.markLossReportReported({ user: req.user, reportId: req.validated.params.id, authorityReference: req.validated.body.authorityReference }) });
+  }),
+);
+
+inventoryRouter.get(
+  '/loss-reports/export',
+  validate({ query: schemas.lossReportListQuerySchema.partial() }),
+  asyncHandler(async (req, res) => {
+    const csv = await svc.exportLossReports({ user: req.user, query: req.validated.query });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="loss-reports.csv"');
+    res.send(csv);
+  }),
+);

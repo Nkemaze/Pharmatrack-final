@@ -139,3 +139,35 @@ export function serializeMovement(movement) {
     recordedAt: movement.recordedAt,
   };
 }
+
+export function serializePublicPharmacy(pharmacy, distanceKm) {
+  return {
+    id: pharmacy.id,
+    name: pharmacy.name,
+    address: pharmacy.address,
+    city: pharmacy.city,
+    phone: pharmacy.phone,
+    emergencyPhone: pharmacy.emergencyPhone,
+    emergencyDesc: pharmacy.emergencyDesc,
+    openingHours: pharmacy.openingHours,
+    latitude: pharmacy.latitude?.toString() ?? null,
+    longitude: pharmacy.longitude?.toString() ?? null,
+    updatedAt: pharmacy.updatedAt,
+    ...(distanceKm !== undefined ? { distanceKm } : {}),
+  };
+}
+
+export function serializeLossReport(report) {
+  const movement = report.movement;
+  return {
+    id: report.id,
+    date: movement?.occurredAt ? isoDate(movement.occurredAt) : null,
+    productName: movement?.batch?.product?.name ?? null,
+    batchNumber: movement?.batch?.batchNumber ?? null,
+    quantity: movement?.quantity ?? null,
+    reason: report.circumstances,
+    reported: report.reportedToAuthorityAt != null,
+    reportedToAuthorityAt: report.reportedToAuthorityAt,
+    authorityReference: report.authorityReference,
+  };
+}

@@ -93,3 +93,14 @@ export const movementListQuerySchema = z.strictObject({
   to: z.coerce.date().optional(),
   ...pagination,
 });
+
+export const lossReportListQuerySchema = z.strictObject({
+  unreportedOnly: z.coerce.boolean().default(false),
+  ...pagination,
+});
+
+export const lossReportParamsSchema = z.strictObject({ id: uuid });
+
+export const lossReportUpdateSchema = z.strictObject({
+  authorityReference: z.string().trim().nullish(),
+});
